@@ -1,0 +1,24 @@
+services:
+  project-os-for-codex:
+    build: .
+    ports:
+      - "127.0.0.1:8790:8790"
+    environment:
+      PORT: "8790"
+      # Local evaluation only. Production must enable password auth.
+      NODE_ENV: development
+      PROJECT_OS_DEV_NO_AUTH: "true"
+      PROJECT_OS_PUBLIC_BASE: http://localhost:8790
+      PROJECT_OS_DATA_DIR: /data
+      # Set these and remove PROJECT_OS_DEV_NO_AUTH for a protected local run.
+      # PROJECT_OS_AUTH_USER: admin@example.com
+      # PROJECT_OS_AUTH_PASSWORD: change-me
+      # Optional OpenAI-compatible provider.
+      # PROJECT_OS_AI_BASE: https://api.openai.com/v1
+      # PROJECT_OS_AI_KEY: sk-...
+      # PROJECT_OS_AI_MODEL: replace-with-a-supported-chat-model
+    volumes:
+      - project_os_data:/data
+
+volumes:
+  project_os_data:

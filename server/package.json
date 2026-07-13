@@ -1,0 +1,36 @@
+{
+  "name": "project-os-for-codex-server",
+  "private": false,
+  "version": "0.2.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "Workspace-scoped project memory, progress, audit, and MCP access kernel for Codex.",
+  "keywords": [
+    "ai-agents",
+    "ai-project-management",
+    "agent-handoff",
+    "codex",
+    "context-engineering",
+    "express",
+    "git",
+    "knowledge-base",
+    "mcp",
+    "nodejs",
+    "project-management"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test agent-api.test.js",
+    "seed": "node seed.js",
+    "import": "node import-knowledge.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "nodemailer": "^6.10.1",
+    "pdfkit": "^0.19.1"
+  }
+}

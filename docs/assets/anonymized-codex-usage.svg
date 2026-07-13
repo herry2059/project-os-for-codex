@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Anonymized maintainer Codex activity snapshot</title>
+  <desc id="desc">A privacy-safe summary showing 8.8 billion lifetime tokens, 14,570 tasks, a 23-day streak, a 10 hour 25 minute longest task, and 743 skill uses. These are maintainer activity metrics, not repository adoption metrics.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07111f"/>
+      <stop offset="0.55" stop-color="#0b1727"/>
+      <stop offset="1" stop-color="#101827"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5eead4"/>
+      <stop offset="1" stop-color="#60a5fa"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" rx="32" fill="url(#bg)"/>
+  <circle cx="1030" cy="80" r="170" fill="#1d4ed8" opacity="0.13" filter="url(#glow)"/>
+  <circle cx="160" cy="610" r="190" fill="#0d9488" opacity="0.12" filter="url(#glow)"/>
+
+  <text x="70" y="82" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="3">REAL-WORK SNAPSHOT · JULY 2026</text>
+  <text x="70" y="137" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700">Built through sustained Codex delivery work</text>
+  <text x="70" y="176" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="21">An anonymized maintainer activity summary — no name, handle, avatar, or account ID.</text>
+  <rect x="70" y="212" width="1060" height="2" fill="url(#accent)" opacity="0.7"/>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <g transform="translate(70 252)">
+      <rect width="320" height="130" rx="20" fill="#ffffff" opacity="0.055" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="24" y="40" fill="#94a3b8" font-size="17">CUMULATIVE TOKENS</text>
+      <text x="24" y="91" fill="#f8fafc" font-size="42" font-weight="700">8.8B</text>
+      <text x="192" y="91" fill="#5eead4" font-size="17">high-frequency use</text>
+    </g>
+    <g transform="translate(410 252)">
+      <rect width="320" height="130" rx="20" fill="#ffffff" opacity="0.055" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="24" y="40" fill="#94a3b8" font-size="17">CODEX TASKS</text>
+      <text x="24" y="91" fill="#f8fafc" font-size="42" font-weight="700">14,570</text>
+      <text x="196" y="91" fill="#60a5fa" font-size="17">real workflows</text>
+    </g>
+    <g transform="translate(750 252)">
+      <rect width="380" height="130" rx="20" fill="#ffffff" opacity="0.055" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="24" y="40" fill="#94a3b8" font-size="17">CURRENT / LONGEST STREAK</text>
+      <text x="24" y="91" fill="#f8fafc" font-size="42" font-weight="700">23 days</text>
+      <text x="224" y="91" fill="#a7f3d0" font-size="17">continuous</text>
+    </g>
+
+    <g transform="translate(70 402)">
+      <rect width="520" height="104" rx="20" fill="#ffffff" opacity="0.04" stroke="#ffffff" stroke-opacity="0.10"/>
+      <text x="24" y="38" fill="#94a3b8" font-size="16">LONGEST SINGLE TASK</text>
+      <text x="24" y="76" fill="#e2e8f0" font-size="30" font-weight="700">10 h 25 min</text>
+    </g>
+    <g transform="translate(610 402)">
+      <rect width="520" height="104" rx="20" fill="#ffffff" opacity="0.04" stroke="#ffffff" stroke-opacity="0.10"/>
+      <text x="24" y="38" fill="#94a3b8" font-size="16">SKILL USES</text>
+      <text x="24" y="76" fill="#e2e8f0" font-size="30" font-weight="700">743</text>
+      <text x="104" y="76" fill="#94a3b8" font-size="17">across 29 explored skills</text>
+    </g>
+  </g>
+
+  <rect x="70" y="541" width="1060" height="1" fill="#ffffff" opacity="0.10"/>
+  <text x="70" y="580" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="17">Evidence of maintainer practice, not a claim about repository users, downloads, projects, or adoption.</text>
+  <text x="1130" y="580" text-anchor="end" fill="#5eead4" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">Project OS for Codex</text>
+</svg>

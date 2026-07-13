@@ -1,0 +1,55 @@
+{
+  "name": "project-os-for-codex",
+  "private": false,
+  "version": "0.2.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "Self-hosted AI Project OS for Codex: MCP-powered project memory, visible progress, resumable context, and handoff-ready delivery.",
+  "bin": {
+    "project-os-mcp": "mcp/server.mjs"
+  },
+  "keywords": [
+    "ai",
+    "ai-agents",
+    "ai-coding",
+    "codex",
+    "ai-project-management",
+    "agent-handoff",
+    "context-engineering",
+    "developer-tools",
+    "git",
+    "handoff",
+    "knowledge-base",
+    "mcp",
+    "model-context-protocol",
+    "project-management",
+    "workflow"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "release:guard": "node scripts/release-guard.mjs",
+    "check": "pnpm run release:guard && pnpm run build && pnpm --dir server test && node --check mcp/server.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.400.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "typescript": "^5.5.4",
+    "vite": "^5.3.5"
+  }
+}

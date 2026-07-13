@@ -1,0 +1,38 @@
+<svg width="1200" height="620" viewBox="0 0 1200 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="620" rx="28" fill="#0A0A0D"/>
+  <text x="70" y="78" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">Architecture</text>
+  <text x="70" y="115" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="18">A small, inspectable stack: React UI, Express API, JSON metadata, and Git repositories as the evidence layer.</text>
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="70" y="170" width="260" height="300" rx="18" fill="#111827" stroke="#334155"/>
+    <text x="100" y="215" fill="#E0F2FE" font-size="22" font-weight="700">Frontend</text>
+    <text x="100" y="252" fill="#CBD5E1" font-size="16">React + Vite + TypeScript</text>
+    <text x="100" y="284" fill="#94A3B8" font-size="15">Dashboard</text>
+    <text x="100" y="314" fill="#94A3B8" font-size="15">Project detail</text>
+    <text x="100" y="344" fill="#94A3B8" font-size="15">Handoff view</text>
+    <text x="100" y="374" fill="#94A3B8" font-size="15">Knowledge base</text>
+    <rect x="470" y="170" width="260" height="300" rx="18" fill="#111827" stroke="#334155"/>
+    <text x="500" y="215" fill="#DCFCE7" font-size="22" font-weight="700">Server</text>
+    <text x="500" y="252" fill="#CBD5E1" font-size="16">Node.js + Express</text>
+    <text x="500" y="284" fill="#94A3B8" font-size="15">Auth and workspaces</text>
+    <text x="500" y="314" fill="#94A3B8" font-size="15">Project events</text>
+    <text x="500" y="344" fill="#94A3B8" font-size="15">Handoff packages</text>
+    <text x="500" y="374" fill="#94A3B8" font-size="15">AI helper hooks</text>
+    <rect x="870" y="170" width="260" height="300" rx="18" fill="#111827" stroke="#334155"/>
+    <text x="900" y="215" fill="#FEF3C7" font-size="22" font-weight="700">Persistence</text>
+    <text x="900" y="252" fill="#CBD5E1" font-size="16">JSON + Git repos</text>
+    <text x="900" y="284" fill="#94A3B8" font-size="15">projects.json</text>
+    <text x="900" y="314" fill="#94A3B8" font-size="15">knowledge.json</text>
+    <text x="900" y="344" fill="#94A3B8" font-size="15">per-project Git repo</text>
+    <text x="900" y="374" fill="#94A3B8" font-size="15">commit history</text>
+  </g>
+  <g stroke="#64748B" stroke-width="4" stroke-linecap="round">
+    <path d="M330 320H470"/>
+    <path d="M730 320H870"/>
+  </g>
+  <g fill="#64748B">
+    <path d="M462 311L476 320L462 329V311Z"/>
+    <path d="M862 311L876 320L862 329V311Z"/>
+  </g>
+  <rect x="70" y="510" width="1060" height="56" rx="14" fill="#0F172A" stroke="#1E293B"/>
+  <text x="100" y="546" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="17">Private provider adapters and production secrets stay outside the open-source repository.</text>
+</svg>

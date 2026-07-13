@@ -1,0 +1,33 @@
+# Project OS for Codex
+
+Project OS for Codex is a self-hosted project memory and handoff layer for Codex.
+
+It helps teams make AI work visible, resumable, and easy to hand off:
+
+- Git-backed progress events
+- Project kickoff cards
+- Next-step tracking
+- Handoff packages for humans and AI agents
+- Knowledge capture from project retrospectives
+- Short-lived, project-scoped AI credentials
+- MCP tools for reading project context and appending idempotent progress
+
+Primary documentation:
+
+- README: https://github.com/herry2059/project-os-for-codex/blob/main/README.md
+- Codex setup: https://github.com/herry2059/project-os-for-codex/blob/main/docs/CODEX_SETUP.md
+- Interfaces: https://github.com/herry2059/project-os-for-codex/blob/main/docs/INTERFACES.md
+- Deployment: https://github.com/herry2059/project-os-for-codex/blob/main/docs/DEPLOYMENT.md
+
+Current MCP tools:
+
+- project_os_get_context: read kickoff, acceptance criteria, AGENTS rules, handoff, progress, recent Git trail, and next step.
+- project_os_append_progress: append one validated and idempotent progress event plus one Git commit.
+
+Safety:
+
+- Do not ask users for their website password.
+- Use a short-lived AI credential bound to one workspace and one project.
+- Deletion, member permissions, key management, publication, payment, deployment, and rollback require a human.
+
+This file is a machine-readable documentation index. It is not a claim of affiliation with or endorsement by OpenAI.

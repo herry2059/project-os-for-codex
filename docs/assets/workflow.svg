@@ -1,0 +1,37 @@
+<svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="520" rx="28" fill="#090A0F"/>
+  <rect x="40" y="40" width="1120" height="440" rx="24" fill="#10131C" stroke="#2B3142"/>
+  <text x="80" y="100" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">AI project work should not disappear into chat history</text>
+  <text x="80" y="142" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="18">Project OS for Codex turns agent work into visible project state, Git evidence, and handoff context.</text>
+  <g font-family="Inter, Arial, sans-serif" font-size="17" font-weight="600">
+    <rect x="80" y="210" width="150" height="92" rx="14" fill="#172033" stroke="#3B82F6"/>
+    <text x="114" y="248" fill="#DBEAFE">Kickoff</text>
+    <text x="109" y="276" fill="#93C5FD" font-size="13">goal and scope</text>
+    <rect x="270" y="210" width="150" height="92" rx="14" fill="#172033" stroke="#22C55E"/>
+    <text x="314" y="248" fill="#DCFCE7">Git Repo</text>
+    <text x="300" y="276" fill="#86EFAC" font-size="13">evidence trail</text>
+    <rect x="460" y="210" width="150" height="92" rx="14" fill="#172033" stroke="#F59E0B"/>
+    <text x="499" y="248" fill="#FEF3C7">Events</text>
+    <text x="490" y="276" fill="#FCD34D" font-size="13">agent updates</text>
+    <rect x="650" y="210" width="150" height="92" rx="14" fill="#172033" stroke="#A855F7"/>
+    <text x="688" y="248" fill="#F3E8FF">Progress</text>
+    <text x="678" y="276" fill="#D8B4FE" font-size="13">next step visible</text>
+    <rect x="840" y="210" width="150" height="92" rx="14" fill="#172033" stroke="#06B6D4"/>
+    <text x="876" y="248" fill="#CFFAFE">Handoff</text>
+    <text x="865" y="276" fill="#67E8F9" font-size="13">resume context</text>
+  </g>
+  <g stroke="#64748B" stroke-width="3" stroke-linecap="round">
+    <path d="M230 256H270"/>
+    <path d="M420 256H460"/>
+    <path d="M610 256H650"/>
+    <path d="M800 256H840"/>
+  </g>
+  <g fill="#64748B">
+    <path d="M263 248L275 256L263 264V248Z"/>
+    <path d="M453 248L465 256L453 264V248Z"/>
+    <path d="M643 248L655 256L643 264V248Z"/>
+    <path d="M833 248L845 256L833 264V248Z"/>
+  </g>
+  <rect x="80" y="356" width="1040" height="70" rx="16" fill="#0B1120" stroke="#1E293B"/>
+  <text x="112" y="397" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">Result: the next human or AI session starts from project truth, not from a fragile memory of the last chat.</text>
+</svg>

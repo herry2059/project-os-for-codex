@@ -1,0 +1,22 @@
+<svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="520" rx="28" fill="#08111F"/>
+  <circle cx="600" cy="260" r="150" stroke="#38BDF8" stroke-width="3" stroke-dasharray="10 12"/>
+  <g font-family="Inter, Arial, sans-serif" font-weight="700" font-size="20">
+    <rect x="500" y="78" width="200" height="72" rx="16" fill="#0F172A" stroke="#60A5FA"/>
+    <text x="548" y="122" fill="#EFF6FF">Project Card</text>
+    <rect x="802" y="224" width="210" height="72" rx="16" fill="#0F172A" stroke="#34D399"/>
+    <text x="852" y="268" fill="#ECFDF5">Git Commit</text>
+    <rect x="495" y="370" width="210" height="72" rx="16" fill="#0F172A" stroke="#FBBF24"/>
+    <text x="543" y="414" fill="#FEFCE8">Progress UI</text>
+    <rect x="190" y="224" width="210" height="72" rx="16" fill="#0F172A" stroke="#C084FC"/>
+    <text x="233" y="268" fill="#FAF5FF">Handoff Pack</text>
+  </g>
+  <g stroke="#94A3B8" stroke-width="3" stroke-linecap="round">
+    <path d="M688 134C762 158 817 194 852 230"/>
+    <path d="M888 292C849 348 776 391 698 405"/>
+    <path d="M502 405C424 391 351 348 312 292"/>
+    <path d="M348 230C383 194 438 158 512 134"/>
+  </g>
+  <text x="420" y="260" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">Git is the progress ledger</text>
+  <text x="423" y="296" fill="#93A4B8" font-family="Inter, Arial, sans-serif" font-size="17">Events, commits, handoff, and review stay connected.</text>
+</svg>
