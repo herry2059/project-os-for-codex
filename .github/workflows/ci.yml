@@ -44,3 +44,38 @@ jobs:
 
       - name: Syntax-check server
         run: node --check server/index.js
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build container image
+        run: docker build --tag project-os-for-codex:ci .
+
+      - name: Start container and verify health
+        run: |
+          docker run --detach \
+            --name project-os-for-codex-ci \
+            --publish 127.0.0.1:8790:8790 \
+            --env NODE_ENV=development \
+            --env PROJECT_OS_DEV_NO_AUTH=true \
+            project-os-for-codex:ci
+
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:8790/api/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          docker logs project-os-for-codex-ci
+          exit 1
+
+      - name: Stop container
+        if: always()
+        run: docker rm --force project-os-for-codex-ci || true
