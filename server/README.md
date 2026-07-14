@@ -8,11 +8,12 @@ The server is the Git-backed execution kernel:
 
 ## Run
 
+From the repository root:
+
 ```bash
-cd server
-npm install
-npm run seed
-PROJECT_OS_DEV_NO_AUTH=true npm start
+pnpm install
+pnpm --dir server run seed
+PROJECT_OS_DEV_NO_AUTH=true pnpm --dir server start
 ```
 
 The API listens on `http://localhost:8790` by default.

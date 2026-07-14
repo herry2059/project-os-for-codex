@@ -9,6 +9,8 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/herry2059/project-os-for-codex/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/herry2059/project-os-for-codex/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI Status"></a>
+  <a href="https://github.com/herry2059/project-os-for-codex/releases/latest"><img src="https://img.shields.io/github/v/release/herry2059/project-os-for-codex?style=for-the-badge" alt="Latest Release"></a>
   <a href="https://github.com/herry2059/project-os-for-codex/stargazers"><img src="https://img.shields.io/github/stars/herry2059/project-os-for-codex?style=for-the-badge" alt="GitHub Stars"></a>
   <a href="https://github.com/herry2059/project-os-for-codex/forks"><img src="https://img.shields.io/github/forks/herry2059/project-os-for-codex?style=for-the-badge" alt="GitHub Forks"></a>
   <a href="https://github.com/herry2059/project-os-for-codex/graphs/contributors"><img src="https://img.shields.io/github/contributors/herry2059/project-os-for-codex?style=for-the-badge" alt="Contributors"></a>
@@ -27,8 +29,6 @@
 Project OS for Codex is for the moment when a team asks: **What is the AI doing? Where should the next session start? How can another person or AI take over without rereading every chat?**
 
 It is not another AI chat window. It is the control plane around the work: kickoff card, acceptance criteria, current progress, Git evidence, next action, reusable knowledge, and a handoff package that both humans and agents can read.
-
-If that problem feels familiar, a ⭐ Star helps more AI builders discover the project.
 
 ![Project OS for Codex working project cockpit in an isolated local workspace](docs/assets/product-dashboard-dark.png)
 
@@ -51,10 +51,6 @@ This is not a weekend concept built from imagined agent problems. It was distill
 The anonymized July 2026 maintainer snapshot below shows **14,570 Codex tasks, 8.8B lifetime tokens, a 23-day streak, and 743 skill uses**. These numbers are evidence of maintainer practice—not repository users, downloads, adoption, or 14,570 separate projects.
 
 ![Anonymized maintainer Codex activity: 14,570 tasks and 8.8B lifetime tokens](docs/assets/anonymized-codex-usage.svg)
-
-The identity block in this source screenshot is deliberately redacted. The visible usage values are the maintainer's real July 2026 Codex activity and are not repository adoption metrics.
-
-![Anonymized Codex maintainer profile showing 8.8B lifetime tokens, 14,570 tasks, a 23-day streak, and 743 skill uses](docs/assets/maintainer-codex-usage.png)
 
 ## Explain It Like I Am New
 
@@ -81,13 +77,20 @@ The first production-oriented slice exposes two real MCP tools:
 
 Credentials expire after 24 hours or 7 days, can be revoked independently, are stored only as hashes, and cannot access members, keys, deletion, publication, or deployment.
 
+Version 0.3.0 adds a fail-closed first-run contract:
+
+- the MCP process verifies the credential, project binding, scopes, and exact two-tool surface before Codex starts using it;
+- the project-level configuration requires the server and allowlists only the released tools;
+- from a checked-out and installed repository, `pnpm codex:doctor` exercises that checkout's MCP server and backend without calling the progress-write tool; normal credential usage and audit metadata are still recorded, and this local check does not prove that Codex loaded a saved client configuration or the pinned Git tag;
+- root and generated `AGENTS.md` files tell Codex to read context first, verify one vertical slice, and only then write progress back.
+
 [Follow the Codex setup guide →](docs/CODEX_SETUP.md)
 
 ### Designed around Codex's real extension points
 
 - Codex reads the repository's root [`AGENTS.md`](AGENTS.md) before work starts.
 - The stdio MCP server returns concise workflow instructions during initialization.
-- Tool annotations distinguish the read-only context tool from the scoped progress-write tool.
+- Tool annotations distinguish the project-state read context tool from the scoped progress-write tool; successful reads still update credential-use and audit metadata.
 - [`.codex/config.toml.example`](.codex/config.toml.example) shows a project-scoped configuration that forwards local environment variables without committing secret values.
 - The same MCP configuration can be used by Codex CLI, the Codex IDE extension, and the ChatGPT desktop app on the same Codex host.
 - High-risk actions stay outside the MCP surface and require a human.
@@ -266,8 +269,8 @@ This project is useful if you are:
 
 Requirements:
 
-- Node.js 18+
-- npm or pnpm
+- Node.js 22+ (a currently supported LTS line)
+- pnpm 9+
 - Git
 
 The fastest local-only start is Docker Compose:
@@ -281,22 +284,20 @@ Open <http://localhost:8790>. The included Compose file binds to `127.0.0.1` and
 For a manual development start, install frontend dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Start the backend:
 
 ```bash
-cd server
-npm install
-npm run seed
-PROJECT_OS_DEV_NO_AUTH=true npm start
+pnpm --dir server run seed
+PROJECT_OS_DEV_NO_AUTH=true pnpm --dir server start
 ```
 
 Start the frontend in another terminal:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Open the Vite URL shown in your terminal. The API listens on:
@@ -348,6 +349,8 @@ People may find this project while searching for:
 
 This repository is an early public open-source release.
 
+Version 0.3.0 closes the audited global-role/workspace-role escalation path, prevents startup migration from guessing or restoring a revoked default-workspace owner, and adds regression coverage for those boundaries. It also adds a reproducible repository-local MCP/backend connection doctor. The MCP surface remains exactly two scoped tools.
+
 Before production use, review the release gate:
 
 - multi-tenant permission audit;
@@ -376,7 +379,9 @@ Codex is a trademark of OpenAI. This independent open-source project is not affi
 
 This repository is intended to be maintained in public. Every release will document verified additions, security changes, known limits, and the next milestone in [CHANGELOG.md](CHANGELOG.md) and [ROADMAP.md](ROADMAP.md).
 
-The next milestone is **v0.3.0: deeper Codex workflow**—a tested first-run path for Codex, richer structured evidence, safer remote MCP transport, and clearer AGENTS.md-driven acceptance. Planned work is not presented as released functionality.
+The latest release is **v0.3.0: Codex First-Run Contract**—fail-closed MCP preflight, a project-state connection doctor, strict tool allowlisting, clearer `AGENTS.md` execution rules, and workspace-role security regression tests.
+
+The next milestone is **v0.4.0: guided Codex onboarding**. Remote MCP, OAuth, source-repository synchronization, and maintainer automation remain planned work and are not presented as released functionality.
 
 ## Contributing
 

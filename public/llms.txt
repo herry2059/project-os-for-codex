@@ -11,6 +11,7 @@ It helps teams make AI work visible, resumable, and easy to hand off:
 - Knowledge capture from project retrospectives
 - Short-lived, project-scoped AI credentials
 - MCP tools for reading project context and appending idempotent progress
+- Fail-closed MCP capability preflight and a project-state connection doctor
 
 Primary documentation:
 
@@ -21,8 +22,13 @@ Primary documentation:
 
 Current MCP tools:
 
-- project_os_get_context: read kickoff, acceptance criteria, AGENTS rules, handoff, progress, recent Git trail, and next step.
+- project_os_get_context: read kickoff, acceptance criteria, AGENTS rules, handoff, progress, recent Git trail, and next step without changing project progress or Git history; credential-use and audit metadata are recorded.
 - project_os_append_progress: append one validated and idempotent progress event plus one Git commit.
+
+Codex first-run verification:
+
+- The project-level configuration requires the MCP server and allowlists exactly the two released tools.
+- From an installed checkout, `pnpm codex:doctor` verifies the credential, project binding, MCP handshake, tool list, and context read against that checkout without calling the progress-write tool. Normal credential usage and audit metadata are recorded. This repository-local check does not prove that Codex loaded a saved client configuration or the pinned Git tag.
 
 Safety:
 

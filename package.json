@@ -1,10 +1,22 @@
 {
   "name": "project-os-for-codex",
   "private": false,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "Apache-2.0",
   "type": "module",
   "description": "Self-hosted AI Project OS for Codex: MCP-powered project memory, visible progress, resumable context, and handoff-ready delivery.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/herry2059/project-os-for-codex.git"
+  },
+  "homepage": "https://github.com/herry2059/project-os-for-codex#readme",
+  "bugs": {
+    "url": "https://github.com/herry2059/project-os-for-codex/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@9.15.9",
   "bin": {
     "project-os-mcp": "mcp/server.mjs"
   },
@@ -13,6 +25,7 @@
     "ai-agents",
     "ai-coding",
     "codex",
+    "codex-cli",
     "ai-project-management",
     "agent-handoff",
     "context-engineering",
@@ -21,6 +34,7 @@
     "handoff",
     "knowledge-base",
     "mcp",
+    "mcp-server",
     "model-context-protocol",
     "project-management",
     "workflow"
@@ -28,8 +42,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "codex:doctor": "node scripts/codex-doctor.mjs",
     "release:guard": "node scripts/release-guard.mjs",
-    "check": "pnpm run release:guard && pnpm run build && pnpm --dir server test && node --check mcp/server.mjs",
+    "check": "pnpm run release:guard && pnpm run build && pnpm --dir server test && node --check mcp/server.mjs && node --check scripts/codex-doctor.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -1,14 +1,57 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(import.meta.dirname, '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const listed = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
   cwd: root,
   encoding: 'utf8',
 });
 const files = listed.split('\0').filter(Boolean);
 const failures = [];
+const rootPackage = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const serverPackage = JSON.parse(fs.readFileSync(path.join(root, 'server/package.json'), 'utf8'));
+const releaseVersion = String(rootPackage.version || '').trim();
+const releaseTag = `v${releaseVersion}`;
+
+if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) failures.push('package.json: version must be a stable semantic version');
+if (serverPackage.version !== releaseVersion) failures.push('server/package.json: version does not match package.json');
+if (rootPackage.engines?.node !== '>=22' || serverPackage.engines?.node !== '>=22') {
+  failures.push('package engines: supported Node.js version must remain aligned at >=22');
+}
+for (const [file, marker] of [
+  ['mcp/server.mjs', `version: '${releaseVersion}'`],
+  ['scripts/codex-doctor.mjs', `version: '${releaseVersion}'`],
+  ['server/index.js', `#${releaseTag}`],
+  ['.codex/config.toml.example', `#${releaseTag}`],
+  ['docs/CODEX_SETUP.md', `#${releaseTag}`],
+]) {
+  const content = fs.readFileSync(path.join(root, file), 'utf8');
+  if (!content.includes(marker)) failures.push(`${file}: release version does not match package.json`);
+}
+
+const codexConfig = fs.readFileSync(path.join(root, '.codex/config.toml.example'), 'utf8');
+for (const marker of [
+  'required = true',
+  'enabled_tools = ["project_os_get_context", "project_os_append_progress"]',
+  'startup_timeout_sec = 90',
+  'default_tools_approval_mode = "writes"',
+]) {
+  if (!codexConfig.includes(marker)) failures.push(`.codex/config.toml.example: missing strict Codex marker ${marker}`);
+}
+const gitignore = fs.readFileSync(path.join(root, '.gitignore'), 'utf8');
+for (const marker of ['.codex/config.toml', '.codex/*.env', '.codex-log/']) {
+  if (!gitignore.split(/\r?\n/).includes(marker)) failures.push(`.gitignore: missing ${marker}`);
+}
+const dockerfile = fs.readFileSync(path.join(root, 'Dockerfile'), 'utf8');
+if ((dockerfile.match(/^FROM node:24-alpine/gm) || []).length !== 2) {
+  failures.push('Dockerfile: build and runtime stages must use the supported Node.js 24 image');
+}
+const ciWorkflow = fs.readFileSync(path.join(root, '.github/workflows/ci.yml'), 'utf8');
+if (!ciWorkflow.includes('node-version: [22, 24]')) {
+  failures.push('.github/workflows/ci.yml: CI must test Node.js 22 and 24');
+}
 const legacyLanguageMarker = String.fromCharCode(122, 104, 45, 67, 78);
 const legacyBrandMarker = [
   [104, 97, 111, 121, 117, 101],

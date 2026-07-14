@@ -25,6 +25,19 @@ async function waitForServer(url, child) {
   throw new Error('server did not become ready');
 }
 
+async function runNode(args, { cwd = testDir, env = {} } = {}) {
+  const child = spawn(process.execPath, args, {
+    cwd,
+    env: { ...process.env, ...env },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let output = '';
+  child.stdout.on('data', (chunk) => { output += chunk; });
+  child.stderr.on('data', (chunk) => { output += chunk; });
+  const code = await new Promise((resolve) => child.once('exit', resolve));
+  return { code, output };
+}
+
 test('production fails closed when password authentication is missing', async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-os-auth-test-'));
   const child = spawn(process.execPath, ['index.js'], {
@@ -46,6 +59,114 @@ test('production fails closed when password authentication is missing', async ()
   fs.rmSync(dataDir, { recursive: true, force: true });
   assert.notEqual(code, 0);
   assert.match(output, /Production requires PROJECT_OS_AUTH_USER/);
+});
+
+test('fresh protected startup assigns the explicitly seeded identity as default owner', async (t) => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-os-seeded-owner-test-'));
+  const port = 22000 + Math.floor(Math.random() * 1500);
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const child = spawn(process.execPath, ['index.js'], {
+    cwd: testDir,
+    env: {
+      ...process.env,
+      PORT: String(port),
+      NODE_ENV: 'test',
+      PROJECT_OS_DATA_DIR: dataDir,
+      PROJECT_OS_AUTH_USER: 'seeded-owner@example.test',
+      PROJECT_OS_AUTH_PASSWORD: 'seeded-owner-password',
+      PROJECT_OS_PUBLIC_BASE: baseUrl,
+      PROJECT_OS_DEV_NO_AUTH: 'false',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let serverOutput = '';
+  child.stdout.on('data', (chunk) => { serverOutput += chunk; });
+  child.stderr.on('data', (chunk) => { serverOutput += chunk; });
+  t.after(() => {
+    child.kill('SIGTERM');
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+  await waitForServer(baseUrl, child).catch((error) => {
+    throw new Error(`${error.message}\n${serverOutput}`);
+  });
+
+  const login = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'seeded-owner@example.test', password: 'seeded-owner-password' }),
+  });
+  assert.equal(login.status, 200);
+  const body = await login.json();
+  assert.equal(body.workspace.id, 'ws_default');
+  assert.equal(body.workspace.role, 'owner');
+  assert.equal(body.user.role, 'admin');
+});
+
+test('protected startup after local dev assigns the explicitly seeded identity without guessing', async (t) => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-os-dev-to-auth-test-'));
+  let authChild = null;
+  const devPort = 23500 + Math.floor(Math.random() * 500);
+  const devUrl = `http://127.0.0.1:${devPort}`;
+  const devChild = spawn(process.execPath, ['index.js'], {
+    cwd: testDir,
+    env: {
+      ...process.env,
+      PORT: String(devPort),
+      NODE_ENV: 'development',
+      PROJECT_OS_DATA_DIR: dataDir,
+      PROJECT_OS_AUTH_USER: '',
+      PROJECT_OS_AUTH_PASSWORD: '',
+      PROJECT_OS_PUBLIC_BASE: devUrl,
+      PROJECT_OS_DEV_NO_AUTH: 'true',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let devOutput = '';
+  devChild.stdout.on('data', (chunk) => { devOutput += chunk; });
+  devChild.stderr.on('data', (chunk) => { devOutput += chunk; });
+  t.after(() => {
+    if (devChild.exitCode === null) devChild.kill('SIGTERM');
+    if (authChild?.exitCode === null) authChild.kill('SIGTERM');
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+  await waitForServer(devUrl, devChild).catch((error) => {
+    throw new Error(`${error.message}\n${devOutput}`);
+  });
+  devChild.kill('SIGTERM');
+  await new Promise((resolve) => devChild.once('exit', resolve));
+
+  const authPort = 24000 + Math.floor(Math.random() * 500);
+  const authUrl = `http://127.0.0.1:${authPort}`;
+  authChild = spawn(process.execPath, ['index.js'], {
+    cwd: testDir,
+    env: {
+      ...process.env,
+      PORT: String(authPort),
+      NODE_ENV: 'test',
+      PROJECT_OS_DATA_DIR: dataDir,
+      PROJECT_OS_AUTH_USER: 'upgraded-owner@example.test',
+      PROJECT_OS_AUTH_PASSWORD: 'upgraded-owner-password',
+      PROJECT_OS_PUBLIC_BASE: authUrl,
+      PROJECT_OS_DEV_NO_AUTH: 'false',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let authOutput = '';
+  authChild.stdout.on('data', (chunk) => { authOutput += chunk; });
+  authChild.stderr.on('data', (chunk) => { authOutput += chunk; });
+  await waitForServer(authUrl, authChild).catch((error) => {
+    throw new Error(`${error.message}\n${authOutput}`);
+  });
+
+  const login = await fetch(`${authUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'upgraded-owner@example.test', password: 'upgraded-owner-password' }),
+  });
+  assert.equal(login.status, 200);
+  const body = await login.json();
+  assert.equal(body.workspace.id, 'ws_default');
+  assert.equal(body.workspace.role, 'owner');
 });
 
 test('workspace invite creates a scoped join request and requires owner approval', async (t) => {
@@ -160,6 +281,162 @@ test('workspace invite creates a scoped join request and requires owner approval
   });
   assert.equal(loginAfterApproval.status, 200);
   assert.ok(loginAfterApproval.headers.get('set-cookie'));
+});
+
+test('workspace bootstrap never infers an owner from a global role or user order', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-os-owner-migration-test-'));
+  process.env.PROJECT_OS_DATA_DIR = dataDir;
+  const store = await import(`./store.js?owner-migration=${Date.now()}`);
+  try {
+    const outsider = store.addUser({
+      username: 'first-global-admin@example.test',
+      email: 'first-global-admin@example.test',
+      password: 'first-global-admin-password',
+      displayName: 'First Global Admin',
+      role: 'admin',
+    });
+    const revokedOwner = store.addUser({
+      username: 'revoked-owner@example.test',
+      email: 'revoked-owner@example.test',
+      password: 'revoked-owner-password',
+      displayName: 'Revoked Owner',
+      role: 'member',
+    });
+    const activeOwner = store.addUser({
+      username: 'active-owner@example.test',
+      email: 'active-owner@example.test',
+      password: 'active-owner-password',
+      displayName: 'Active Owner',
+      role: 'member',
+    });
+    store.saveWorkspaces([
+      {
+        id: store.DEFAULT_WORKSPACE_ID,
+        name: 'Existing Default Workspace',
+        ownerUserId: revokedOwner.id,
+        status: 'active',
+        inviteCode: 'POSBOUNDARY',
+        wsPub: 'project-os',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+    store.addMembership({ workspaceId: store.DEFAULT_WORKSPACE_ID, userId: revokedOwner.id, role: 'owner' });
+    store.addMembership({ workspaceId: store.DEFAULT_WORKSPACE_ID, userId: activeOwner.id, role: 'owner' });
+    store.removeMembership(store.DEFAULT_WORKSPACE_ID, revokedOwner.id);
+    assert.equal(store.getWorkspace(store.DEFAULT_WORKSPACE_ID).ownerUserId, activeOwner.id);
+
+    // Simulate a stale v0.2 workspace pointer left behind after the membership was revoked.
+    store.updateWorkspace(store.DEFAULT_WORKSPACE_ID, { ownerUserId: revokedOwner.id });
+
+    store.ensureWorkspaceData({ bootstrapOwnerUserId: outsider.id });
+
+    assert.equal(store.getWorkspace(store.DEFAULT_WORKSPACE_ID).ownerUserId, activeOwner.id);
+    assert.equal(store.membershipOf(activeOwner.id, store.DEFAULT_WORKSPACE_ID)?.role, 'owner');
+    assert.equal(store.membershipOf(revokedOwner.id, store.DEFAULT_WORKSPACE_ID), null);
+    assert.equal(store.membershipOf(outsider.id, store.DEFAULT_WORKSPACE_ID), null);
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+
+  const freshDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-os-fresh-owner-test-'));
+  process.env.PROJECT_OS_DATA_DIR = freshDataDir;
+  const freshStore = await import(`./store.js?fresh-owner=${Date.now()}`);
+  try {
+    const seeded = freshStore.addUser({
+      username: 'fresh-owner@example.test',
+      email: 'fresh-owner@example.test',
+      password: 'fresh-owner-password',
+      displayName: 'Fresh Owner',
+      role: 'admin',
+    });
+    freshStore.ensureWorkspaceData({ bootstrapOwnerUserId: seeded.id });
+    assert.equal(freshStore.getWorkspace(freshStore.DEFAULT_WORKSPACE_ID).ownerUserId, seeded.id);
+    assert.equal(freshStore.membershipOf(seeded.id, freshStore.DEFAULT_WORKSPACE_ID)?.role, 'owner');
+  } finally {
+    fs.rmSync(freshDataDir, { recursive: true, force: true });
+  }
+});
+
+test('global account role never overrides the current workspace membership', async (t) => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-os-role-test-'));
+  process.env.PROJECT_OS_DATA_DIR = dataDir;
+  const store = await import(`./store.js?role=${Date.now()}`);
+  const owner = store.addUser({
+    username: 'workspace-owner@example.test',
+    email: 'workspace-owner@example.test',
+    password: 'workspace-owner-password',
+    displayName: 'Workspace Owner',
+    role: 'member',
+  });
+  const legacyAdmin = store.addUser({
+    username: 'legacy-admin@example.test',
+    email: 'legacy-admin@example.test',
+    password: 'legacy-admin-password',
+    displayName: 'Legacy Admin',
+    role: 'admin',
+  });
+  const workspace = store.createWorkspace({ name: 'Member Boundary', ownerUserId: owner.id, status: 'active' });
+  store.addMembership({ workspaceId: workspace.id, userId: legacyAdmin.id, role: 'member' });
+
+  const port = 26000 + Math.floor(Math.random() * 2000);
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const child = spawn(process.execPath, ['index.js'], {
+    cwd: testDir,
+    env: {
+      ...process.env,
+      PORT: String(port),
+      NODE_ENV: 'test',
+      PROJECT_OS_DATA_DIR: dataDir,
+      PROJECT_OS_AUTH_USER: 'emergency-admin',
+      PROJECT_OS_AUTH_PASSWORD: 'unused-emergency-password',
+      PROJECT_OS_PUBLIC_BASE: baseUrl,
+      PROJECT_OS_DEV_NO_AUTH: 'false',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let serverOutput = '';
+  child.stdout.on('data', (chunk) => { serverOutput += chunk; });
+  child.stderr.on('data', (chunk) => { serverOutput += chunk; });
+  t.after(() => {
+    child.kill('SIGTERM');
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+  await waitForServer(baseUrl, child).catch((error) => {
+    throw new Error(`${error.message}\n${serverOutput}`);
+  });
+  assert.equal(store.membershipOf(legacyAdmin.id, store.DEFAULT_WORKSPACE_ID), null);
+
+  const login = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: legacyAdmin.username, password: 'legacy-admin-password' }),
+  });
+  assert.equal(login.status, 200);
+  const cookie = login.headers.get('set-cookie');
+  assert.ok(cookie);
+
+  const me = await fetch(`${baseUrl}/api/auth/me`, { headers: { Cookie: cookie } });
+  assert.equal(me.status, 200);
+  const meBody = await me.json();
+  assert.equal(meBody.workspace.id, workspace.id);
+  assert.equal(meBody.workspace.role, 'member');
+  assert.equal(meBody.user.role, 'member');
+
+  const createKey = await fetch(`${baseUrl}/api/kb-keys`, {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'must-not-exist' }),
+  });
+  assert.equal(createKey.status, 403);
+
+  const createAdmin = await fetch(`${baseUrl}/api/users`, {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'forbidden@example.test', password: 'forbidden-password', role: 'admin' }),
+  });
+  assert.equal(createAdmin.status, 403);
+  assert.equal(store.getUserByUsername('forbidden@example.test'), null);
 });
 
 test('AI credential is tenant-scoped, revocable, validated, audited, and idempotent', async (t) => {
@@ -341,6 +618,13 @@ test('AI credential is tenant-scoped, revocable, validated, audited, and idempot
     tools.tools.map((tool) => tool.name).sort(),
     ['project_os_append_progress', 'project_os_get_context'],
   );
+  const contextTool = tools.tools.find((tool) => tool.name === 'project_os_get_context');
+  const progressTool = tools.tools.find((tool) => tool.name === 'project_os_append_progress');
+  assert.equal(contextTool.annotations.readOnlyHint, true);
+  assert.equal(contextTool.annotations.idempotentHint, true);
+  assert.equal(progressTool.annotations.readOnlyHint, false);
+  assert.equal(progressTool.annotations.destructiveHint, false);
+  assert.equal(progressTool.annotations.idempotentHint, true);
   const mcpContext = await mcpClient.callTool({ name: 'project_os_get_context', arguments: {} });
   assert.equal(mcpContext.isError, undefined);
   assert.equal(mcpContext.structuredContent.project.id, projectId);
@@ -363,6 +647,39 @@ test('AI credential is tenant-scoped, revocable, validated, audited, and idempot
   assert.equal(git.readLog(repoDir).length, beforeMcpWrite + 1);
   assert.match(git.readLog(repoDir)[0].verification, /acceptance test/i);
   await mcpClient.close();
+
+  const beforeDoctor = git.readLog(repoDir).length;
+  const beforeDoctorAudit = store.listAgentAudit(store.DEFAULT_WORKSPACE_ID, projectId).length;
+  const doctor = await runNode([path.resolve(testDir, '../scripts/codex-doctor.mjs')], {
+    env: {
+      PROJECT_OS_BASE_URL: baseUrl,
+      PROJECT_OS_AGENT_TOKEN: created.token,
+      PROJECT_OS_PROJECT_ID: projectId,
+    },
+  });
+  assert.equal(doctor.code, 0, doctor.output);
+  assert.match(doctor.output, /Project OS connection: OK/);
+  assert.match(doctor.output, /MCP tools: 2\/2 available/);
+  assert.match(doctor.output, /No project progress or Git history was changed/);
+  assert.match(doctor.output, /Credential usage and audit metadata were recorded/);
+  assert.equal(git.readLog(repoDir).length, beforeDoctor);
+  const doctorAudit = store.listAgentAudit(store.DEFAULT_WORKSPACE_ID, projectId);
+  assert.equal(doctorAudit.length, beforeDoctorAudit + 2);
+  assert.deepEqual(
+    doctorAudit.slice(0, 2).map((event) => event.action).sort(),
+    ['capabilities.read', 'project.context.read'],
+  );
+
+  const wrongProject = await runNode([path.resolve(testDir, '../mcp/server.mjs')], {
+    env: {
+      PROJECT_OS_BASE_URL: baseUrl,
+      PROJECT_OS_AGENT_TOKEN: created.token,
+      PROJECT_OS_PROJECT_ID: 'project-b',
+    },
+  });
+  assert.notEqual(wrongProject.code, 0);
+  assert.match(wrongProject.output, /project was not found for this credential/i);
+  assert.equal(wrongProject.output.includes(created.token), false);
 
   const reachedHundred = await fetch(`${baseUrl}/api/agent/v1/projects/${projectId}/events`, {
     method: 'POST',
@@ -388,4 +705,14 @@ test('AI credential is tenant-scoped, revocable, validated, audited, and idempot
   store.revokeAgentToken(store.DEFAULT_WORKSPACE_ID, created.credential.id);
   const revoked = await fetch(`${baseUrl}/api/agent/v1/projects/${projectId}/context`, { headers });
   assert.equal(revoked.status, 401);
+  const revokedMcp = await runNode([path.resolve(testDir, '../mcp/server.mjs')], {
+    env: {
+      PROJECT_OS_BASE_URL: baseUrl,
+      PROJECT_OS_AGENT_TOKEN: created.token,
+      PROJECT_OS_PROJECT_ID: projectId,
+    },
+  });
+  assert.notEqual(revokedMcp.code, 0);
+  assert.match(revokedMcp.output, /invalid, expired, or revoked/i);
+  assert.equal(revokedMcp.output.includes(created.token), false);
 });

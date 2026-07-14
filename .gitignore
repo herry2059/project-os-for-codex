@@ -10,6 +10,9 @@ server/data/
 !.env.example
 !server/.env.example
 .qa-profile/
+.codex/config.toml
+.codex/*.env
+.codex-log/
 repos/
 server/repos/
 *.pem

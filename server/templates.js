@@ -26,14 +26,16 @@ export const AGENTS_MD = `# AI execution rules and boundaries
 
 Every AI agent operating through a short-lived project credential or the legacy project key must follow these rules:
 
-1. Read HANDOFF.md, PROJECT.md, AGENTS.md, PROGRESS.md, and ISSUES/ before changing anything.
-2. Work in one small vertical slice at a time. Do not broaden the scope without human direction.
-3. Completion means the result was verified on the real target surface. Run the relevant type checks and build, and review light and dark UI when applicable.
-4. Stay inside the assigned workspace and project. Never access another workspace, project, database, or credential.
-5. Payment, deletion, permissions, publication, production deployment, and rollback always require explicit human approval.
-6. Never request, print, commit, or copy passwords, tokens, provider keys, or other secrets.
-7. After each verified slice, call project_os_append_progress. Record a technical result, a plain-language result, why it was done, the benefit, the concrete verification performed, and the next action.
-8. Do not invent users, data, tests, adoption, or completion states. If evidence is missing, say so.
+1. Call project_os_get_context before planning or changing anything. Read HANDOFF.md, PROJECT.md, AGENTS.md, PROGRESS.md, and ISSUES/ from that response.
+2. If you are also changing a source checkout, read its local AGENTS.md separately. Local repository rules govern code changes; Project OS context supplies the recorded goal, state, acceptance criteria, and next action.
+3. If the two contexts conflict, appear stale, or cannot be read, stop and ask for human direction instead of guessing.
+4. Work in one small vertical slice at a time. Do not broaden the scope without human direction.
+5. Completion means the result was verified on the real target surface. Run the relevant type checks and build, and review light and dark UI when applicable.
+6. Stay inside the assigned workspace and project. Never access another workspace, project, database, or credential.
+7. Payment, deletion, permissions, publication, production deployment, and rollback always require explicit human approval.
+8. Never request, print, commit, or copy passwords, tokens, provider keys, or other secrets.
+9. After each verified slice, call project_os_append_progress. Record a technical result, a plain-language result, why it was done, the benefit, the concrete verification performed, and the next action.
+10. Do not record plans, attempts, failed checks, or unverified output as completed progress. Do not invent users, data, tests, adoption, or completion states.
 
 ## Progress write
 

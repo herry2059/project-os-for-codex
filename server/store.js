@@ -72,7 +72,7 @@ function writeJson(file, data) {
 }
 
 function inviteCode() {
-  return `HY${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+  return `POS${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 }
 
 function publicWorkspaceId() {
@@ -209,8 +209,7 @@ export function getWorkspaceByInvite(code) {
   return listWorkspaces().find((w) => w.inviteCode === raw) || null;
 }
 
-const LEGACY_ADMIN_ROLE = 'bo' + 'ss';
-const isAdminRole = (role) => role === 'admin' || role === LEGACY_ADMIN_ROLE;
+const isAdminRole = (role) => role === 'admin';
 const normalizeUserRole = (role) => (isAdminRole(role) ? 'admin' : 'member');
 
 export function createWorkspace({ name, ownerUserId, status = 'pending' } = {}) {
@@ -255,10 +254,25 @@ export function saveMemberships(items) {
   return items;
 }
 
+function syncWorkspaceOwnerFromMemberships(workspaceId) {
+  const workspace = getWorkspace(workspaceId);
+  if (!workspace) return null;
+  const activeOwners = membershipsForWorkspace(workspaceId).filter(
+    (membership) => membership.role === 'owner' && membership.active !== false,
+  );
+  const current = activeOwners.find((membership) => membership.userId === workspace.ownerUserId);
+  const nextOwnerUserId = current?.userId || activeOwners[0]?.userId || null;
+  if ((workspace.ownerUserId || null) === nextOwnerUserId) return workspace;
+  return updateWorkspace(workspaceId, { ownerUserId: nextOwnerUserId });
+}
+
 export function addMembership({ workspaceId, userId, role = 'member', active = true, remark = '' }) {
   const memberships = listMemberships();
   const existing = memberships.find((m) => m.workspaceId === workspaceId && m.userId === userId);
-  if (existing) return existing;
+  if (existing) {
+    if (existing.role === 'owner' && existing.active !== false) syncWorkspaceOwnerFromMemberships(workspaceId);
+    return existing;
+  }
   const rec = {
     id: uid('m'),
     workspaceId,
@@ -271,6 +285,7 @@ export function addMembership({ workspaceId, userId, role = 'member', active = t
   };
   memberships.push(rec);
   saveMemberships(memberships);
+  if (rec.role === 'owner' && rec.active !== false) syncWorkspaceOwnerFromMemberships(workspaceId);
   return rec;
 }
 
@@ -300,6 +315,7 @@ export function updateMembership(workspaceId, userId, patch = {}) {
   next.updatedAt = stamp();
   memberships[idx] = next;
   saveMemberships(memberships);
+  syncWorkspaceOwnerFromMemberships(workspaceId);
   return next;
 }
 
@@ -308,6 +324,7 @@ export function removeMembership(workspaceId, userId) {
   const next = memberships.filter((m) => !(m.workspaceId === workspaceId && m.userId === userId));
   if (next.length === memberships.length) return false;
   saveMemberships(next);
+  syncWorkspaceOwnerFromMemberships(workspaceId);
   return true;
 }
 
@@ -375,9 +392,11 @@ function markWorkspace(items, defaultWorkspaceId) {
  * Multi-tenant foundation migration: idempotently create a neutral default workspace
  * and assign legacy single-workspace records to it without deleting or overwriting business fields.
  */
-export function ensureWorkspaceData() {
+export function ensureWorkspaceData({ bootstrapOwnerUserId = '' } = {}) {
   ensure();
-  let spaces = listWorkspaces();
+  const initialSpaces = listWorkspaces();
+  const initialMemberships = listMemberships();
+  let spaces = initialSpaces;
   let def = spaces.find((w) => w.id === DEFAULT_WORKSPACE_ID);
   if (!def) {
     def = {
@@ -394,11 +413,26 @@ export function ensureWorkspaceData() {
     saveWorkspaces(spaces);
   }
 
-  const users = listUsers();
-  const admins = users.filter((u) => isAdminRole(u.role) && u.active);
-  const owner = admins[0] || users[0] || null;
-  if (owner && !def.ownerUserId) {
-    def = updateWorkspace(def.id, { ownerUserId: owner.id }) || def;
+  const activeUsers = new Map(listUsers().filter((user) => user.active).map((user) => [user.id, user]));
+  const workspaceMemberships = initialMemberships.filter((membership) => membership.workspaceId === def.id);
+  const activeOwnerMemberships = workspaceMemberships.filter(
+    (membership) =>
+      membership.role === 'owner' &&
+      membership.active !== false &&
+      activeUsers.has(membership.userId),
+  );
+  const existingOwnerMembership =
+    activeOwnerMemberships.find((membership) => membership.userId === def.ownerUserId) || activeOwnerMemberships[0];
+  const canMigratePersistedOwner = workspaceMemberships.length === 0 && activeUsers.has(def.ownerUserId);
+  const requestedBootstrapOwner = String(bootstrapOwnerUserId || '').trim();
+  const canBootstrapSeededOwner = initialMemberships.length === 0 && activeUsers.has(requestedBootstrapOwner);
+  const ownerUserId =
+    existingOwnerMembership?.userId ||
+    (canMigratePersistedOwner ? def.ownerUserId : '') ||
+    (canBootstrapSeededOwner ? requestedBootstrapOwner : '');
+
+  if ((def.ownerUserId || null) !== (ownerUserId || null)) {
+    def = updateWorkspace(def.id, { ownerUserId: ownerUserId || null }) || def;
   }
   const refreshed = listWorkspaces();
   let workspaceChanged = false;
@@ -410,14 +444,16 @@ export function ensureWorkspaceData() {
     }
   }
   if (workspaceChanged) saveWorkspaces(refreshed);
-  // Legacy migration grants the neutral default workspace only to its explicit owner.
-  // Every other user must join a workspace through an owner-approved request.
-  if (owner) {
-    addMembership({
-      workspaceId: def.id,
-      userId: owner.id,
-      role: 'owner',
-    });
+  // Never infer workspace authority from a global account role or user order.
+  // Existing membership state is authoritative. A persisted owner can create
+  // the first membership only when that workspace has no membership history;
+  // a freshly seeded identity is allowed only when no prior membership exists.
+  if (ownerUserId) {
+    const membership = membershipOf(ownerUserId, def.id);
+    if (!membership) addMembership({ workspaceId: def.id, userId: ownerUserId, role: 'owner' });
+    else if (membership.role !== 'owner' || membership.active === false) {
+      updateMembership(def.id, ownerUserId, { role: 'owner', active: true });
+    }
   }
 
   const projectsMarked = markWorkspace(listProjects(), def.id);
@@ -426,7 +462,7 @@ export function ensureWorkspaceData() {
   const knowledgeMarked = markWorkspace(listKnowledge(), def.id);
   if (knowledgeMarked.changed) saveKnowledge(knowledgeMarked.next);
 
-  return def;
+  return getWorkspace(def.id) || def;
 }
 export function addKnowledge(item) {
   const all = listKnowledge();
