@@ -132,7 +132,15 @@ Codex stores MCP settings in its configuration. The short-lived token is therefo
 codex mcp remove project-os-<project-id>
 ```
 
-For a project-scoped setup that forwards local environment variables instead of committing values, copy [`.codex/config.toml.example`](../.codex/config.toml.example) to `.codex/config.toml` only in a trusted checkout, expose the three `PROJECT_OS_*` variables through your local shell or secret manager, and restart Codex. The repository ignores `.codex/config.toml`, `.codex/*.env`, and `.codex-log/`, but you should still inspect `git status` before every commit.
+For a project-scoped setup that forwards local environment variables instead of committing values, first inspect the checkout, its root `AGENTS.md`, and [`.codex/config.toml.example`](../.codex/config.toml.example). Copy the example to `.codex/config.toml` only when you trust that repository content, expose the three `PROJECT_OS_*` variables through your local shell or secret manager, and restart Codex. The repository ignores `.codex/config.toml`, `.codex/*.env`, and `.codex-log/`, but you should still inspect `git status` before every commit.
+
+From the repository root, ask the installed Codex CLI to load that project configuration and report missing local runtimes or unresolved MCP commands:
+
+```bash
+codex -C "$PWD" doctor --all
+```
+
+This diagnoses the Codex client and its saved configuration. It complements `pnpm codex:doctor`, which checks the Project OS credential, binding, capability surface, and context read against the current checkout.
 
 The example allows 90 seconds for the first MCP startup because a cold `npx` run may need to fetch the pinned Git release and its dependencies. Later cached starts should be faster.
 
