@@ -76,6 +76,7 @@ app.use(express.json({ limit: '1mb' }));
 
 const PORT = process.env.PORT || 8790;
 const APP_NAME = process.env.PROJECT_OS_APP_NAME || 'Project OS for Codex';
+const MCP_PACKAGE = 'github:herry2059/project-os-for-codex#v0.3.0';
 const GIT_PUBLIC_BASE = process.env.GIT_PUBLIC_BASE || '';
 const KB_DIR = process.env.PROJECT_OS_KB_DIR || '';
 const PUBLIC_BASE = (process.env.PROJECT_OS_PUBLIC_BASE || 'http://localhost:8790').replace(/\/$/, '');
@@ -167,11 +168,13 @@ function sameSiteWriteGuard(req, res, next) {
 
 // On startup, seed an administrator from the environment only when the user store is empty.
 try {
+  let bootstrapOwnerUserId = '';
   if (AUTH_ENABLED && listUsers().length === 0) {
-    addUser({ username: AUTH_USER, password: AUTH_PASSWORD, displayName: AUTH_USER, role: 'admin' });
+    const seeded = addUser({ username: AUTH_USER, password: AUTH_PASSWORD, displayName: AUTH_USER, role: 'admin' });
+    bootstrapOwnerUserId = seeded?.id || '';
     console.log('[auth] Seeded an administrator from environment credentials.');
   }
-  ensureWorkspaceData();
+  ensureWorkspaceData({ bootstrapOwnerUserId });
 } catch (e) {
   console.error('[auth] Initialization failed.', e);
 }
@@ -180,8 +183,7 @@ const now = () => new Date().toISOString();
 const repoDirOf = (id) => path.join(REPOS_DIR, id);
 const repoUrlOf = (id) => (GIT_PUBLIC_BASE ? `${GIT_PUBLIC_BASE}/${id}.git` : `repos/${id}`);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const LEGACY_ADMIN_ROLE = 'bo' + 'ss';
-const isAdminRole = (role) => role === 'admin' || role === LEGACY_ADMIN_ROLE;
+const isAdminRole = (role) => role === 'admin';
 
 function parseCookies(header = '') {
   return Object.fromEntries(
@@ -386,9 +388,11 @@ function requireRole(role) {
     const s = currentSession(req);
     if (!s) return res.status(401).json({ error: 'Authentication is required.' });
     if (role === 'admin') {
-      const pair = currentWorkspacePair(req);
-      const workspaceAdmin = ['owner', 'admin'].includes(pair?.membership?.role);
-      if (!isAdminRole(s.role) && !workspaceAdmin) return res.status(403).json({ error: 'Administrator access is required.' });
+      const pair = assertActiveWorkspace(req, res);
+      if (!pair) return;
+      if (!['owner', 'admin'].includes(pair.membership?.role)) {
+        return res.status(403).json({ error: 'Workspace administrator access is required.' });
+      }
     }
     return next();
   };
@@ -397,7 +401,7 @@ function requireRole(role) {
 function effectiveUserRole(req, session) {
   if (!session) return 'member';
   const pair = currentWorkspacePair(req);
-  if (isAdminRole(session.role) || ['owner', 'admin'].includes(pair?.membership?.role)) return 'admin';
+  if (['owner', 'admin'].includes(pair?.membership?.role)) return 'admin';
   return 'member';
 }
 
@@ -405,9 +409,10 @@ function startSession(res, data) {
   const token = crypto.randomBytes(32).toString('base64url');
   sessions.set(token, { ...data, expiresAt: Date.now() + SESSION_TTL_MS });
   res.setHeader('Set-Cookie', authCookie(token, Math.floor(SESSION_TTL_MS / 1000)));
-  const workspace = data.currentWorkspaceId ? getWorkspace(data.currentWorkspaceId) : null;
-  const membership = data.userId && workspace ? membershipOf(data.userId, workspace.id) : null;
-  const frontRole = isAdminRole(data.role) || ['owner', 'admin'].includes(membership?.role) ? 'admin' : 'member';
+  const pair = userMemberships(data).find(({ workspace }) => workspace.id === data.currentWorkspaceId) || null;
+  const workspace = pair?.workspace || null;
+  const membership = pair?.membership || null;
+  const frontRole = ['owner', 'admin'].includes(membership?.role) ? 'admin' : 'member';
   return res.json({
     ok: true,
     user: {
@@ -2262,7 +2267,7 @@ api.post('/projects/:id/agent-tokens', (req, res) => {
     ...created,
     baseUrl: PUBLIC_BASE,
     projectId: rec.id,
-    mcpPackage: 'github:herry2059/project-os-for-codex#v0.2.0',
+    mcpPackage: MCP_PACKAGE,
   });
 });
 

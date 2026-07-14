@@ -17,6 +17,8 @@ Use this checklist before every public release, not only the first one. A clean 
 
 - Persisted records belong to a `workspaceId`.
 - A request derives its workspace from a verified session or credential, not from an untrusted request body field.
+- Workspace administration is derived only from the active workspace membership; a global account role never grants authority in another workspace.
+- Startup migration never guesses a default-workspace owner from a global role or user order. Active owner memberships are authoritative; persisted ownership may create the first membership only when no membership history exists, and a freshly seeded identity is accepted only when no prior membership exists.
 - New Codex connections use short-lived, project-scoped credentials rather than website passwords.
 - Agent credentials are sent in `Authorization: Bearer`, returned in plaintext once, and stored only as hashes.
 - The legacy compatibility secret is accepted only in `X-Project-Key`.
@@ -60,6 +62,9 @@ The release may proceed only after all of the following are true:
 - production authentication fails closed when required variables are missing;
 - agent credentials are workspace-bound, project-bound, scoped, expiring, revocable, hashed at rest, and audited;
 - cross-workspace context reads and writes are rejected by automated tests;
+- a global administrator account with only member access in the current workspace is rejected by workspace-administrator endpoints;
+- existing workspace ownership survives restart without granting the first user or a global administrator a new default-workspace membership;
+- removing or downgrading one of multiple owners updates the workspace owner pointer and does not restore that owner after restart;
 - idempotent retries produce one event and one Git commit;
 - `pnpm run check` succeeds;
 - affected UI paths are inspected in both light and dark themes;

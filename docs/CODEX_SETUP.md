@@ -9,6 +9,15 @@ The first production-oriented vertical slice lets an agent:
 3. create exactly one matching project-record Git commit, even when a network retry repeats the request;
 4. make the result immediately visible in the web timeline.
 
+## Requirements
+
+- Node.js 22 or newer on a currently supported LTS line, `npx`, and Git on the machine that runs the stdio MCP server;
+- Codex CLI, the Codex IDE extension, or another Codex host that supports MCP;
+- a running Project OS server reachable over HTTPS outside local evaluation;
+- one short-lived project credential created by a human project owner or workspace administrator.
+
+Codex does not provide a system Node.js runtime for arbitrary local MCP packages. If `node --version` or `npx --version` fails, install Node.js before continuing.
+
 ## Why the agent should not receive your website password
 
 A website account can usually manage projects, users, credentials, deletion, and settings. A password pasted into a model conversation can enter chat history, logs, screenshots, or a third-party service, and you cannot revoke access for just one agent.
@@ -52,7 +61,7 @@ codex mcp add project-os-<project-id> \
   --env PROJECT_OS_BASE_URL='https://your-domain.example' \
   --env PROJECT_OS_AGENT_TOKEN='pos_...' \
   --env PROJECT_OS_PROJECT_ID='<project-id>' \
-  -- npx -y github:herry2059/project-os-for-codex#v0.2.0
+  -- npx -y github:herry2059/project-os-for-codex#v0.3.0
 ```
 
 Check the connection:
@@ -60,6 +69,17 @@ Check the connection:
 ```bash
 codex mcp list
 ```
+
+`codex mcp list` proves that Codex parsed the configuration. It does not prove that the service, credential, project binding, scopes, tools, and context read all work.
+
+Version 0.3.0 performs a fail-closed capability check before the MCP server accepts a Codex session. For an explicit project-state check from this repository, expose the same three `PROJECT_OS_*` values through your local shell or secret manager and run:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm codex:doctor
+```
+
+A successful check prints the project name, current progress, next step, and `MCP tools: 2/2 available`. The doctor never calls the progress-write tool, so project progress and Git history stay unchanged. The server still records normal credential usage and the two read audit events (`capabilities.read` and `project.context.read`). This command exercises the MCP server in the current checkout; it does not prove that Codex loaded a saved client configuration or that the pinned Git tag can launch. Use `codex mcp list` for entries added through the CLI and Codex's `/mcp` view for project-scoped configuration.
 
 Then ask Codex:
 
@@ -73,7 +93,7 @@ Read the Project OS context first. Summarize the goal, acceptance criteria, risk
 
 ### `project_os_get_context`
 
-Read-only. Returns the kickoff card, acceptance criteria, `AGENTS.md`, handoff package, progress, recent Git trail, and next step.
+Project-state read-only. Returns the kickoff card, acceptance criteria, `AGENTS.md`, handoff package, progress, recent Git trail, and next step without changing project progress or Git history. A successful request still updates the credential's last-used timestamp and appends a read audit event.
 
 ### `project_os_append_progress`
 
@@ -98,12 +118,13 @@ If the same idempotency key and payload are retried, the server returns the exis
 The MCP server is shaped around Codex's documented capabilities:
 
 - its initialization instructions tell Codex to read context first, follow `PROJECT.md` and `AGENTS.md`, complete one checked slice, include a verification note, and stop for human approval on high-risk actions;
-- `project_os_get_context` is marked read-only and idempotent;
+- initialization verifies the short-lived credential, configured project binding, required scopes, and exact released tool surface before Codex can use the server;
+- `project_os_get_context` is marked project-state read-only and idempotent; successful requests still persist normal credential-use and audit metadata;
 - `project_os_append_progress` is marked non-destructive and idempotent, but it remains an explicit write tool;
 - the root `AGENTS.md` gives Codex durable repository rules before work starts;
 - the generated command follows the official `codex mcp add ... -- <stdio command>` shape.
 
-Configuration smoke test: on 2026-07-14, Codex CLI `0.144.2` parsed the supplied project-level MCP configuration and listed the pinned stdio server successfully with placeholder environment values. This proves configuration compatibility only; it is not a claim that a model completed a live project task.
+The checked-in configuration is intentionally strict: `required = true` fails the Codex startup path when project context is unavailable, and `enabled_tools` allowlists only the two tools released in v0.3.0. The write tool remains subject to the `writes` approval mode.
 
 Codex stores MCP settings in its configuration. The short-lived token is therefore present on the client until you remove the entry. Use HTTPS in production, choose the shortest practical lifetime, revoke the credential after the task, and remove the local entry:
 
@@ -111,7 +132,19 @@ Codex stores MCP settings in its configuration. The short-lived token is therefo
 codex mcp remove project-os-<project-id>
 ```
 
-For a project-scoped setup that forwards local environment variables instead of committing values, copy [`.codex/config.toml.example`](../.codex/config.toml.example) to `.codex/config.toml` only in a trusted checkout, export the three `PROJECT_OS_*` variables locally, and restart Codex.
+For a project-scoped setup that forwards local environment variables instead of committing values, first inspect the checkout, its root `AGENTS.md`, and [`.codex/config.toml.example`](../.codex/config.toml.example). Copy the example to `.codex/config.toml` only when you trust that repository content, expose the three `PROJECT_OS_*` variables through your local shell or secret manager, and restart Codex. The repository ignores `.codex/config.toml`, `.codex/*.env`, and `.codex-log/`, but you should still inspect `git status` before every commit.
+
+From the repository root, ask the installed Codex CLI to load that project configuration and report missing local runtimes or unresolved MCP commands:
+
+```bash
+codex -C "$PWD" doctor --all
+```
+
+This diagnoses the Codex client and its saved configuration. It complements `pnpm codex:doctor`, which checks the Project OS credential, binding, capability surface, and context read against the current checkout.
+
+The example allows 90 seconds for the first MCP startup because a cold `npx` run may need to fetch the pinned Git release and its dependencies. Later cached starts should be faster.
+
+The Git tag in the example is a release reference, not a software supply-chain guarantee. Until a provenance-backed package is published, review the release commit before allowing the MCP process to receive a credential and upgrade intentionally.
 
 ## AI access by module
 

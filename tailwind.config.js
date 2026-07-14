@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Dark console palette inspired by the SynapseX reference, tuned for internal ops.
+        // Neutral dark console palette for the public project cockpit.
         brand: {
           50: 'rgba(255,255,255,0.08)',
           100: 'rgba(255,255,255,0.12)',

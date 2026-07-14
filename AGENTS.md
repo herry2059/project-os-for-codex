@@ -31,6 +31,13 @@ These rules apply to Codex and every contributor working in this repository.
 - Project event writes require `Idempotency-Key`, server-derived actor identity, input validation, workspace and project isolation, and an audit event.
 - Keep dangerous tools out of the MCP surface until a human approval workflow exists.
 
+## Codex session protocol
+
+- When a Project OS MCP connection is configured, call `project_os_get_context` before planning or editing. If it fails, do not guess or claim the project is connected; run `pnpm codex:doctor` and report the blocker.
+- Read the source checkout's local `AGENTS.md` as the code-change contract. Treat Project OS context as the project goal, recorded state, acceptance criteria, and next action. If they conflict or look stale, stop and ask for human direction.
+- Complete and verify one vertical slice. Only then call `project_os_append_progress` with the checked result, plain-language result, reason, benefit, verification, and next action.
+- Do not record plans, attempts, failed checks, or unverified output as completed progress.
+
 ## Deployment
 
 - Do not deploy, restart production, change live permissions, delete data, or force-push without explicit human confirmation.

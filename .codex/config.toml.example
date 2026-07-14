@@ -3,9 +3,11 @@
 
 [mcp_servers.project-os]
 command = "npx"
-args = ["-y", "github:herry2059/project-os-for-codex#v0.2.0"]
+args = ["-y", "github:herry2059/project-os-for-codex#v0.3.0"]
 env_vars = ["PROJECT_OS_BASE_URL", "PROJECT_OS_AGENT_TOKEN", "PROJECT_OS_PROJECT_ID"]
-required = false
-startup_timeout_sec = 20
+enabled = true
+required = true
+enabled_tools = ["project_os_get_context", "project_os_append_progress"]
+startup_timeout_sec = 90
 tool_timeout_sec = 60
 default_tools_approval_mode = "writes"

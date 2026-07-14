@@ -8,6 +8,8 @@ import * as z from 'zod/v4';
 const baseUrl = String(process.env.PROJECT_OS_BASE_URL || '').trim().replace(/\/$/, '');
 const agentToken = String(process.env.PROJECT_OS_AGENT_TOKEN || '').trim();
 const projectId = String(process.env.PROJECT_OS_PROJECT_ID || '').trim();
+const requiredScopes = ['project.context.read', 'project.events.append'];
+const requiredTools = ['project_os_append_progress', 'project_os_get_context'];
 
 if (!baseUrl || !agentToken || !projectId) {
   console.error('Missing PROJECT_OS_BASE_URL, PROJECT_OS_AGENT_TOKEN, or PROJECT_OS_PROJECT_ID.');
@@ -30,12 +32,47 @@ async function request(pathname, init = {}) {
     });
     const body = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new Error(body?.error || `Project OS API request failed (${response.status})`);
+      const error = new Error(`Project OS request failed with status ${response.status}.`);
+      error.statusCode = response.status;
+      throw error;
     }
     return body;
   } finally {
     clearTimeout(timer);
   }
+}
+
+function safeErrorMessage(error) {
+  if (error?.name === 'AbortError') return 'Project OS connection timed out. Check that the service is reachable.';
+  if (error?.statusCode === 400) return 'Project OS rejected the request. Check the required progress fields and limits.';
+  if (error?.statusCode === 401) return 'Project OS credential is invalid, expired, or revoked.';
+  if (error?.statusCode === 403) return 'Project OS credential does not have the required project scope.';
+  if (error?.statusCode === 404) return 'Project OS project was not found for this credential.';
+  if (error?.statusCode === 409) return 'Project OS rejected a conflicting retry key.';
+  if (error?.statusCode === 429) return 'Project OS is temporarily rate limited. Try again shortly.';
+  return 'Project OS is temporarily unavailable. Check the connection and try again.';
+}
+
+async function verifyConnection() {
+  const capabilities = await request('/api/agent/v1/capabilities');
+  if (capabilities?.project?.id !== projectId) {
+    const error = new Error('Project OS credential does not match the configured project.');
+    error.statusCode = 404;
+    throw error;
+  }
+  const scopes = new Set(Array.isArray(capabilities?.credential?.scopes) ? capabilities.credential.scopes : []);
+  if (requiredScopes.some((scope) => !scopes.has(scope))) {
+    const error = new Error('Project OS credential does not have the required project scope.');
+    error.statusCode = 403;
+    throw error;
+  }
+  const tools = Array.isArray(capabilities?.tools)
+    ? capabilities.tools.map((tool) => tool?.name).filter(Boolean).sort()
+    : [];
+  if (JSON.stringify(tools) !== JSON.stringify(requiredTools)) {
+    throw new Error('Project OS service does not expose the required Codex tools.');
+  }
+  return capabilities;
 }
 
 function toolResult(value) {
@@ -48,12 +85,12 @@ function toolResult(value) {
 function toolError(error) {
   return {
     isError: true,
-    content: [{ type: 'text', text: error instanceof Error ? error.message : 'The service is temporarily unavailable.' }],
+    content: [{ type: 'text', text: safeErrorMessage(error) }],
   };
 }
 
 const server = new McpServer(
-  { name: 'project-os-for-codex', version: '0.2.0' },
+  { name: 'project-os-for-codex', version: '0.3.0' },
   {
     instructions:
       'Read project context before acting. Follow PROJECT.md and AGENTS.md. After each checked slice, append one progress event with a concrete verification note. Never request or expose passwords, tokens, provider keys, or credentials. Deletion, permission changes, publication, payment, deployment, and rollback always require a human.',
@@ -124,4 +161,10 @@ server.registerTool(
 );
 
 const transport = new StdioServerTransport();
+try {
+  await verifyConnection();
+} catch (error) {
+  console.error(safeErrorMessage(error));
+  process.exit(1);
+}
 await server.connect(transport);

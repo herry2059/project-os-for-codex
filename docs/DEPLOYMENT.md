@@ -14,7 +14,7 @@ Open <http://localhost:8790>. The included Compose configuration binds to `127.0
 
 Requirements:
 
-- Node.js 18 or newer;
+- Node.js 22 or newer on a currently supported LTS line;
 - Git;
 - pnpm.
 
@@ -183,4 +183,3 @@ Before exposing a release to users:
 6. exercise the Codex MCP context-read and progress-write path against staging;
 7. test backup and rollback commands;
 8. obtain human approval for the repository, license, permissions, deployment, and traffic switch.
-
